@@ -1,6 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 */
+@import "tailwindcss";
+
+/* 1) Define your custom brand colors */
+@theme {
+  --color-brand-50:  #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;   /* <- used by ring-brand-500 */
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #075985;
+  --color-brand-900: #0c4a6e;
+}
 
 @layer base {
   :focus-visible { @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white; }
@@ -8,10 +21,17 @@
 
 @layer components {
   .card { @apply bg-white rounded-2xl shadow-sm border border-gray-200; }
-  .btn { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2 font-medium border border-transparent shadow-sm; }
-  .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
-  .btn-ghost { @apply btn bg-transparent border-gray-300 hover:bg-gray-50; }
+
+  /* Base button */
+  .btn { @apply inline-flex items-center justify-center rounded-2xl px-4 py-2
+                 font-medium border border-transparent shadow-sm; }
+  /* Variants: no @apply of .btn */
+  .btn-primary { @apply bg-brand-600 text-white hover:bg-brand-700; }
+  .btn-ghost   { @apply bg-transparent border-gray-300 hover:bg-gray-50; }
+
+  /* Base badge */
   .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold; }
-  .badge-fake { @apply badge bg-red-100 text-red-800; }
-  .badge-real { @apply badge bg-emerald-100 text-emerald-800; }
+  /* Variants: no @apply of .badge */
+  .badge-fake { @apply bg-red-100 text-red-800; }
+  .badge-real { @apply bg-emerald-100 text-emerald-800; }
 }

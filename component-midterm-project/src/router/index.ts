@@ -1,23 +1,32 @@
+// src/router/index.ts  (or src/route/index.ts if that's your folder)
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import { getById } from '../data/news'
+
+// ✅ lazy-load views with the correct filenames
+const Home = () => import('../views/HomeView.vue')
+const Details = () => import('../views/Details.vue')
+const Comments = () => import('../views/Comments.vue')
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes: [
+    { path: '/', name: 'home', component: Home },
     {
-      path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
-    },
-  ],
+      path: '/news/:id',
+      name: 'details',
+      component: Details,
+      props: true,
+      beforeEnter: (to, _from, next) => {
+        const item = getById(String(to.params.id))
+        if (!item) return next({ name: 'home' })
+        to.meta.item = item
+        next()
+      },
+      children: [
+        { path: 'comments', name: 'comments', component: Comments, props: true }
+      ]
+    }
+  ]
 })
 
 export default router
