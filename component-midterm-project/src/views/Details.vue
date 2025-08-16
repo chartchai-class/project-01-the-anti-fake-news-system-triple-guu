@@ -1,46 +1,77 @@
 <template>
-  <main id="main" class="mx-auto max-w-4xl px-4 py-6">
-    <RouterLink to="/" class="text-sm text-brand-700 hover:underline">← Back to list</RouterLink>
+  <main class="mx-auto max-w-3xl p-4" v-if="item">
+    <!-- News details -->
+    <h1 class="text-2xl font-bold mb-2">{{ item.topic }}</h1>
+    <p class="text-gray-700 mb-4">{{ item.detail }}</p>
 
-    <article class="card mt-3 overflow-hidden">
-      <img :src="item.image" alt="Full news image" class="h-72 w-full object-cover" />
-      <div class="p-5 space-y-3">
-        <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-bold">{{ item.topic }}</h1>
-          <span :class="item.status==='fake' ? 'badge-fake' : 'badge-real'">{{ item.status==='fake' ? 'Fake' : 'Non‑fake' }}</span>
-        </div>
-        <p class="text-gray-700">{{ item.details }}</p>
-        <p class="text-sm text-gray-500">By {{ item.reporter }} · {{ new Date(item.date).toLocaleString() }}</p>
-
-        <div class="flex flex-wrap items-center gap-3 pt-2">
-          <button class="btn-primary" @click="cast('up')" aria-label="Vote non‑fake">👍 Vote non‑fake</button>
-          <button class="btn-ghost" @click="cast('down')" aria-label="Vote fake">👎 Vote fake</button>
-          <span class="text-sm text-gray-600">👍 {{ votes.up }} · 👎 {{ votes.down }}</span>
-        </div>
-      </div>
-    </article>
-
-    <div class="mt-4 flex justify-end">
-      <RouterLink :to="`/news/${item.id}/comments`" class="btn-ghost">Open comments →</RouterLink>
+    <!-- Voting -->
+    <div class="flex gap-4 mb-6">
+      <button @click="cast(1)" class="btn-primary">👍 {{ votes.up }}</button>
+      <button @click="cast(-1)" class="btn-ghost">👎 {{ votes.down }}</button>
     </div>
 
-    <RouterView />
+    <!-- Comments -->
+    <section>
+      <h2 class="text-xl font-semibold mb-2">Comments</h2>
+
+      <!-- Comment form -->
+      <form @submit.prevent="addNewComment" class="flex gap-2 mb-4">
+        <input
+          v-model="newComment"
+          placeholder="Write a comment..."
+          class="border p-2 flex-1 rounded"
+        />
+        <button type="submit" class="btn-primary">Post</button>
+      </form>
+
+      <!-- Comments list -->
+      <ul v-if="comments.length" class="space-y-3">
+        <li
+          v-for="c in comments"
+          :key="c.id"
+          class="p-3 border rounded bg-gray-50"
+        >
+          <p>{{ c.text }}</p>
+          <span class="text-xs text-gray-500">
+            {{ new Date(c.createdAt).toLocaleString() }}
+          </span>
+        </li>
+      </ul>
+      <p v-else class="text-gray-500">No comments yet. Be the first!</p>
+    </section>
   </main>
 </template>
-<script setup>
-import { reactive } from "vue"
-import { RouterLink, RouterView, useRoute } from "vue-router"
-import { getById, vote, getVotes } from "../data/news"
 
-const route = useRoute()
+<script setup lang="ts">
+import { ref, computed } from "vue";
+import { useRoute } from "vue-router";
+import { useNewsStore } from "@/stores/newsStore";
 
-// If the router guard set meta, use it; otherwise fall back to params
-const item = route.meta.item ?? getById(String(route.params.id))
+const route = useRoute();
+const newsStore = useNewsStore();
 
-const votes = reactive(getVotes(item.id))
-function cast(type) {
-  const v = vote(item.id, type)
-  votes.up = v.up
-  votes.down = v.down
+const item = computed(() =>
+  newsStore.news.find((n) => String(n.id) === route.params.id)
+);
+
+const votes = computed(() =>
+  item.value ? newsStore.votesFor(item.value.id) : { up: 0, down: 0 }
+);
+
+function cast(dir: 1 | -1) {
+  if (item.value) newsStore.vote(item.value.id, dir);
+}
+
+// comments
+const newComment = ref("");
+const comments = computed(() =>
+  item.value ? newsStore.commentsFor(item.value.id) : []
+);
+
+function addNewComment() {
+  if (item.value && newComment.value.trim()) {
+    newsStore.addComment(item.value.id, newComment.value.trim());
+    newComment.value = "";
+  }
 }
 </script>
