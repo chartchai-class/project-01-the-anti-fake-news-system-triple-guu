@@ -14,11 +14,12 @@ const userId = getUserId();
 export const useNewsStore = defineStore("news", {
   state: () => ({
     news: [] as any[],
-    commentsSeed: [] as any[], 
+    commentsSeed: [] as any[],
     votes: [] as any[],        // from server
     userComments: [] as any[], // from server
 
-    filter: "all" as "all" | "fake" | "non-fake",
+    // ✅ include "neutral" here
+    filter: "all" as "all" | "fake" | "non-fake" | "neutral",
     perPage: 6,
     currentPage: 1,
   }),
@@ -43,65 +44,72 @@ export const useNewsStore = defineStore("news", {
       };
     },
 
-    filteredNews: (state) => {
-      if (state.filter === "all") return state.news;
-      return state.news.filter(n => n.status === state.filter);
-    },
+    statusFor: (state) => {
+      return (newsId: number) => {
+        const votes = state.votes.filter(v => v.newsId === newsId);
+        const up = votes.filter(v => v.dir === 1).length;
+        const down = votes.filter(v => v.dir === -1).length;
 
-    pagedNews: (state) => {
-      return (page: number = state.currentPage) => {
-        const start = (page - 1) * state.perPage;
-        return (state as any).filteredNews.slice(start, start + state.perPage);
+        if (up > down) return "non-fake";
+        if (down > up) return "fake";
+        return "neutral"; // ✅ neutral is now supported
       };
     },
 
-    totalPages: (state) => {
+    filteredNews: (state): any[] => {
+      if (state.filter === "all") {
+        return state.news;
+      }
+      return state.news.filter(n => (state as any).statusFor(n.id) === state.filter);
+    },
+
+    pagedNews: (state): any[] => {
+      const start = (state.currentPage - 1) * state.perPage;
+      return (state as any).filteredNews.slice(start, start + state.perPage);
+    },
+
+    totalPages: (state): number => {
       return Math.ceil((state as any).filteredNews.length / state.perPage);
     },
   },
 
   actions: {
     async fetchNews() {
-      const res = await fetch("http://localhost:3001/news");
-      this.news = await res.json();
-
-      const cRes = await fetch("http://localhost:3001/comments");
-      this.commentsSeed = await cRes.json();
-
-      const vRes = await fetch("http://localhost:3001/votes");
-      this.votes = await vRes.json();
-
-      const uRes = await fetch("http://localhost:3001/userComments");
-      this.userComments = await uRes.json();
+      this.news = await (await fetch("http://localhost:3001/news")).json();
+      this.commentsSeed = await (await fetch("http://localhost:3001/comments")).json();
+      this.votes = await (await fetch("http://localhost:3001/votes")).json();
+      this.userComments = await (await fetch("http://localhost:3001/userComments")).json();
     },
 
     async vote(newsId: number, dir: 1 | -1) {
-  let existing = this.votes.find(v => v.newsId === newsId && v.userId === userId);
+      try {
+        let existing = this.votes.find(v => v.newsId === newsId && v.userId === userId);
 
-  if (!existing) {
-    // first time voting → save
-    const res = await fetch("http://localhost:3001/votes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ newsId, dir, userId })
-    });
-    const saved = await res.json();
-    this.votes.push(saved);
-  } else {
-    // already voted → just update to new direction (no unvote)
-    await fetch(`http://localhost:3001/votes/${existing.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dir })
-    });
-    existing.dir = dir;
-  }
+        if (!existing) {
+          // new vote
+          const res = await fetch("http://localhost:3001/votes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newsId, dir, userId })
+          });
+          const saved = await res.json();
+          this.votes.push(saved);
+        } else {
+          // update vote
+          await fetch(`http://localhost:3001/votes/${existing.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dir })
+          });
+          existing.dir = dir;
+        }
 
-  // refresh state from server to keep all browsers in sync
-  const vRes = await fetch("http://localhost:3001/votes");
-  this.votes = await vRes.json();
-},
-
+        // 🔄 force refresh from server
+        this.votes = await (await fetch("http://localhost:3001/votes")).json();
+      } catch (err) {
+        console.error("Voting failed:", err);
+      }
+    },
 
     async addComment(newsId: number, text: string, imageUrl = "") {
       const newComment = {
@@ -137,7 +145,8 @@ export const useNewsStore = defineStore("news", {
       this.userComments = this.userComments.filter(c => c.id !== commentId);
     },
 
-    setFilter(filter: "all" | "fake" | "non-fake") {
+    // ✅ now accepts "neutral"
+    setFilter(filter: "all" | "fake" | "non-fake" | "neutral") {
       this.filter = filter;
       this.currentPage = 1;
     },

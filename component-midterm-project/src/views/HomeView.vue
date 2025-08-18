@@ -64,10 +64,12 @@ onMounted(async () => {
   uiStore.setLoading(false);
 });
 
-// Filtered list
+// ✅ FIX: Use dynamic status from store instead of static n.status
 const filteredNews = computed(() => {
   if (uiStore.filter === "all") return newsStore.news;
-  return newsStore.news.filter((n) => n.status === uiStore.filter);
+  return newsStore.news.filter(
+    (n) => newsStore.statusFor(n.id) === uiStore.filter
+  );
 });
 
 // ✅ Use getters from uiStore

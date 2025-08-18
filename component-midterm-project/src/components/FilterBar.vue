@@ -15,6 +15,7 @@
         <option value="all">All</option>
         <option value="fake">Fake</option>
         <option value="non-fake">Non-fake</option>
+        <option value="neutral">Neutral</option>
       </select>
     </div>
 
