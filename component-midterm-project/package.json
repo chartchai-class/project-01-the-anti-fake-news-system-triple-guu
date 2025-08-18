@@ -7,15 +7,21 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
-  "dev": "vite",
-  "build": "run-p type-check \"build-only {@}\" --",
-  "preview": "vite preview",
-  "build-only": "vite build",
-  "type-check": "vue-tsc --build",
-  "lint": "eslint . --fix",
-  "format": "prettier --write src/",
-  "mock-server": "json-server --watch db.json --port 3001"
-},
+    "web": "vite",
+     "api": "json-server --watch ./db.json --port 3001",
+    "dev": "run-p web api",
+
+    "build": "run-p type-check \"build-only {@}\" --",
+    "preview:web": "vite preview --port 5173",
+    "preview:all": "run-p preview:web api",
+    "preview": "vite preview",
+
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/",
+    "mock-server": "json-server --watch db.json --port 3001"
+  },
   "dependencies": {
     "pinia": "^3.0.3",
     "vue": "^3.5.18",
