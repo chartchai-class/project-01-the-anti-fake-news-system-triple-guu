@@ -1,32 +1,42 @@
-// src/router/index.ts  (or src/route/index.ts if that's your folder)
+// src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
-import { getById } from '../data/news'
+import type { RouteRecordRaw } from 'vue-router' // <- type-only import fixes your error
 
-// ✅ lazy-load views with the correct filenames
-const Home = () => import('../views/HomeView.vue')
-const Details = () => import('../views/Details.vue')
-const Comments = () => import('../views/Comments.vue')
+// Lazy-loaded views
+const HomeView = () => import('../views/HomeView.vue')
+const Details   = () => import('../views/Details.vue')
+const Comments  = () => import('../views/Comments.vue')
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'home',
+    component: HomeView,
+  },
+  {
+    path: '/news/:id',
+    name: 'details',
+    component: Details,
+    props: true, // passes :id as a prop to Details
+    children: [
+      {
+        path: 'comments',
+        name: 'comments',
+        component: Comments,
+        props: true, // passes :id as a prop to Comments
+      },
+    ],
+  },
+  // (optional) catch-all → send unknown routes to home
+  // { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
+]
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes: [
-    { path: '/', name: 'home', component: Home },
-    {
-      path: '/news/:id',
-      name: 'details',
-      component: Details,
-      props: true,
-      beforeEnter: (to, _from, next) => {
-        const item = getById(String(to.params.id))
-        if (!item) return next({ name: 'home' })
-        to.meta.item = item
-        next()
-      },
-      children: [
-        { path: 'comments', name: 'comments', component: Comments, props: true }
-      ]
-    }
-  ]
+  history: createWebHistory(import.meta.env.BASE_URL),
+  routes,
+  scrollBehavior() {
+    return { top: 0 }
+  },
 })
 
 export default router

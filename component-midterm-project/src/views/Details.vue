@@ -1,77 +1,177 @@
 <template>
-  <main class="mx-auto max-w-3xl p-4" v-if="item">
-    <!-- News details -->
-    <h1 class="text-2xl font-bold mb-2">{{ item.topic }}</h1>
-    <p class="text-gray-700 mb-4">{{ item.detail }}</p>
+  <main class="mx-auto max-w-5xl">
+    <!-- top bar -->
+    <nav class="flex items-center justify-between gap-4 px-4 py-4 border-b bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-10">
+      <RouterLink to="/" class="text-sm text-blue-600 hover:underline">← Back</RouterLink>
+      <RouterLink
+        v-if="item"
+        :to="{ name: 'comments', params: { id } }"
+        class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-md border hover:bg-slate-50"
+        data-testid="details-comments-link"
+      >
+        💬 Comments <span class="text-xs text-slate-500">({{ comments.length }})</span>
+      </RouterLink>
+    </nav>
 
-    <!-- Voting -->
-    <div class="flex gap-4 mb-6">
-      <button @click="cast(1)" class="btn-primary">👍 {{ votes.up }}</button>
-      <button @click="cast(-1)" class="btn-ghost">👎 {{ votes.down }}</button>
-    </div>
-
-    <!-- Comments -->
-    <section>
-      <h2 class="text-xl font-semibold mb-2">Comments</h2>
-
-      <!-- Comment form -->
-      <form @submit.prevent="addNewComment" class="flex gap-2 mb-4">
-        <input
-          v-model="newComment"
-          placeholder="Write a comment..."
-          class="border p-2 flex-1 rounded"
-        />
-        <button type="submit" class="btn-primary">Post</button>
-      </form>
-
-      <!-- Comments list -->
-      <ul v-if="comments.length" class="space-y-3">
-        <li
-          v-for="c in comments"
-          :key="c.id"
-          class="p-3 border rounded bg-gray-50"
-        >
-          <p>{{ c.text }}</p>
-          <span class="text-xs text-gray-500">
-            {{ new Date(c.createdAt).toLocaleString() }}
-          </span>
-        </li>
-      </ul>
-      <p v-else class="text-gray-500">No comments yet. Be the first!</p>
+    <!-- missing -->
+    <section v-if="!item" class="px-4 py-16 text-center text-slate-600">
+      <p class="text-lg">This story couldn’t be found.</p>
+      <RouterLink to="/" class="text-blue-600 hover:underline">Go home</RouterLink>
     </section>
+
+    <!-- content -->
+    <article v-else>
+      <!-- hero -->
+      <header class="px-4 pt-6">
+        <div class="flex items-start justify-between gap-4">
+          <h1 class="text-2xl sm:text-3xl font-bold leading-tight">
+            {{ item.topic }}
+          </h1>
+
+          <!-- status badge -->
+          <span
+            class="px-2 py-1 text-xs font-semibold rounded-full shrink-0"
+            :class="statusClass"
+            data-testid="details-status"
+            :aria-label="`status ${statusLabel}`"
+            role="status"
+          >
+            {{ statusLabel }}
+          </span>
+        </div>
+
+        <!-- meta -->
+        <div class="mt-3 flex items-center gap-3 text-sm text-slate-600">
+          <div
+            class="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-white"
+            :class="avatarBg"
+            :aria-label="`Reporter ${item.reporter}`"
+          >
+            {{ reporterInitials }}
+          </div>
+          <div class="leading-tight">
+            <p><span class="font-medium text-slate-800">{{ item.reporter }}</span></p>
+            <p class="text-xs">{{ reportedAt }}</p>
+          </div>
+          <div class="ml-auto flex items-center gap-2" aria-live="polite">
+            <button @click="vote(1)" class="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 hover:bg-slate-50">
+              👍 <span class="font-medium">{{ votes.up }}</span>
+            </button>
+            <button @click="vote(-1)" class="inline-flex items-center gap-1 rounded-md border px-3 py-1.5 hover:bg-slate-50">
+              👎 <span class="font-medium">{{ votes.down }}</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- banner image -->
+      <figure v-if="item.image" class="mt-5">
+        <img
+          :src="item.image"
+          :alt="item.topic"
+          class="w-full max-h-[460px] object-cover"
+          loading="lazy"
+        />
+      </figure>
+
+      <!-- body -->
+      <section class="px-4 py-6">
+        <div class="prose max-w-none prose-slate">
+          <p class="whitespace-pre-line">
+            {{ item.detail || item.short }}
+          </p>
+        </div>
+
+        <!-- quick actions -->
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <a
+            v-if="externalLink"
+            :href="externalLink"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center gap-2 text-sm text-blue-700 hover:underline"
+          >
+            🔗 Open source link
+          </a>
+
+          <RouterLink
+            :to="{ name: 'comments', params: { id } }"
+            class="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white text-sm px-3 py-2 hover:bg-blue-700"
+          >
+            💬 View comments ({{ comments.length }})
+          </RouterLink>
+        </div>
+      </section>
+
+      <!-- child route outlet (renders comments page under the article if user navigates) -->
+      <RouterView />
+    </article>
   </main>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useRoute } from "vue-router";
-import { useNewsStore } from "@/stores/newsStore";
+import { computed, onMounted } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { useNewsStore } from '@/stores/newsStore'
 
-const route = useRoute();
-const newsStore = useNewsStore();
+const newsStore = useNewsStore()
+const route = useRoute()
+const id = computed(() => String(route.params.id))
 
-const item = computed(() =>
-  newsStore.news.find((n) => String(n.id) === route.params.id)
-);
+onMounted(async () => {
+  if (!newsStore.news.length && newsStore.fetchNews) {
+    await newsStore.fetchNews()
+  }
+})
+
+const item = computed(() => newsStore.news.find(n => String(n.id) === id.value) || null)
+
+const status = computed<'fake' | 'non-fake' | 'neutral' | 'unknown'>(() =>
+  item.value ? (newsStore.statusFor(item.value.id) as any) : 'unknown'
+)
+
+const statusLabel = computed(() =>
+  status.value === 'fake' ? 'Fake' : status.value === 'non-fake' ? 'Non-fake' : 'Neutral'
+)
+
+const statusClass = computed(() => ({
+  fake: 'bg-red-100 text-red-700',
+  'non-fake': 'bg-green-100 text-green-700',
+  neutral: 'bg-yellow-100 text-yellow-700',
+  unknown: 'bg-slate-100 text-slate-700'
+}[status.value]))
 
 const votes = computed(() =>
   item.value ? newsStore.votesFor(item.value.id) : { up: 0, down: 0 }
-);
+)
 
-function cast(dir: 1 | -1) {
-  if (item.value) newsStore.vote(item.value.id, dir);
-}
-
-// comments
-const newComment = ref("");
 const comments = computed(() =>
   item.value ? newsStore.commentsFor(item.value.id) : []
-);
+)
 
-function addNewComment() {
-  if (item.value && newComment.value.trim()) {
-    newsStore.addComment(item.value.id, newComment.value.trim());
-    newComment.value = "";
-  }
+async function vote(dir: 1 | -1) {
+  if (!item.value) return
+  await newsStore.vote(item.value.id, dir)
 }
+
+const reportedAt = computed(() =>
+  item.value ? new Date(item.value.reportedAt).toLocaleString() : ''
+)
+
+const reporterInitials = computed(() => {
+  const name = item.value?.reporter ?? ''
+  return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'R'
+})
+
+const avatarPalette = ['bg-indigo-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500']
+const avatarBg = computed(() => {
+  const i = (String(item.value?.id || 0).length + (item.value?.reporter?.length || 0)) % avatarPalette.length
+  return avatarPalette[i]
+})
+
+const externalLink = computed(() => {
+  // If your item has a link field, expose it; else fall back to image url as a demo “source”.
+  // Change this to match your data model if needed.
+  return (item.value as any)?.link || item.value?.image || ''
+})
 </script>

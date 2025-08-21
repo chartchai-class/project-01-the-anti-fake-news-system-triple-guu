@@ -1,162 +1,172 @@
 <template>
-  <section class="mt-8">
-    <h2 class="text-xl font-semibold mb-4">Comments</h2>
+  <main class="mx-auto max-w-5xl px-4 py-6">
+    <header class="flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <RouterLink :to="{ name: 'details', params: { id } }" class="text-sm text-blue-600 hover:underline">
+          ← Back to article
+        </RouterLink>
+        <h2 class="mt-2 text-xl font-semibold">{{ item?.topic || 'Comments' }}</h2>
+        <p class="text-sm text-slate-500">
+          {{ comments.length }} comment(s) • Votes 👍 {{ votes.up }} / 👎 {{ votes.down }}
+        </p>
+      </div>
 
-    <!-- Comment Form -->
-    <div class="card p-4 mb-6">
-      <form @submit.prevent="onSubmit" class="space-y-3">
-        <textarea
-          v-model.trim="text"
-          required
-          rows="3"
-          class="w-full rounded-lg border-gray-300 focus:ring-brand-500"
-          placeholder="Share your thoughts..."
-        ></textarea>
+      <!-- quick filter (optional visual only) -->
+      <div class="inline-flex rounded-md border overflow-hidden">
+        <button
+          class="px-3 py-1.5 text-sm hover:bg-slate-50"
+          :class="sort === 'new' ? 'bg-slate-100' : ''"
+          @click="sort = 'new'"
+        >
+          Newest
+        </button>
+        <button
+          class="px-3 py-1.5 text-sm hover:bg-slate-50 border-l"
+          :class="sort === 'old' ? 'bg-slate-100' : ''"
+          @click="sort = 'old'"
+        >
+          Oldest
+        </button>
+      </div>
+    </header>
 
-        <input
-          v-model.trim="url"
-          type="url"
-          class="w-full rounded-lg border-gray-300 focus:ring-brand-500"
-          placeholder="Optional: Evidence link (https://example.com)"
-        />
-
-        <div class="flex justify-end gap-2">
-          <button type="reset" class="btn-ghost" @click="resetForm">Cancel</button>
-          <button type="submit" class="btn-primary">Post Comment</button>
-        </div>
-      </form>
-    </div>
-
-    <!-- No comments -->
-    <div v-if="comments.length === 0" class="text-center text-gray-500 py-6">
-      No comments yet. Be the first to share your opinion!
-    </div>
-
-    <!-- Toggle button -->
-    <div v-else class="text-center mb-4">
-      <button
-        @click="showComments = !showComments"
-        class="text-sm text-blue-600 hover:underline"
-      >
-        {{ showComments ? "Hide comments" : "View comments (" + comments.length + ")" }}
-      </button>
-    </div>
-
-    <!-- Comment List -->
-    <ul v-if="showComments" class="space-y-4">
-      <li v-for="c in comments" :key="c.id" class="card p-4">
-        <div class="flex items-start gap-3">
-          <!-- Avatar -->
-          <div
-            class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center font-bold text-brand-700"
+    <section class="mt-6 grid gap-8 lg:grid-cols-[1fr,380px]">
+      <!-- comments list -->
+      <div>
+        <div v-if="paged.length" class="space-y-4">
+          <article
+            v-for="c in paged"
+            :key="c.id"
+            class="grid grid-cols-[40px,1fr] gap-3"
           >
-            {{ c.author?.[0] || "U" }}
-          </div>
-
-          <!-- Comment Content -->
-          <div class="flex-1">
-            <div class="flex items-center justify-between">
-              <span class="font-semibold text-sm">{{ c.author || "Anonymous" }}</span>
-              <time class="text-xs text-gray-500" :datetime="c.createdAt">
-                {{ new Date(c.createdAt).toLocaleString() }}
-              </time>
+            <!-- avatar -->
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white select-none"
+              :class="avatarBgFor(c.id)"
+              aria-hidden="true"
+            >
+              {{ avatarInitialFor(c) }}
             </div>
 
-            <!-- Edit mode -->
-            <div v-if="editingId === c.id">
-              <textarea
-                v-model="editText"
-                rows="2"
-                class="w-full border rounded p-1 mt-2"
-              ></textarea>
-              <div class="flex gap-2 mt-2">
-                <button class="btn-primary text-xs" @click="saveEdit(c.id)">Save</button>
-                <button class="btn-ghost text-xs" @click="cancelEdit">Cancel</button>
+            <!-- bubble -->
+            <div class="rounded-xl border bg-white p-3">
+              <p class="text-sm whitespace-pre-line break-words">
+                <span v-if="isUrl(c.text)">
+                  <a :href="c.text" target="_blank" rel="noopener" class="text-blue-600 underline">
+                    {{ c.text }}
+                  </a>
+                </span>
+                <span v-else>{{ c.text }}</span>
+              </p>
+
+              <div class="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
+                <time :datetime="c.createdAt">{{ fmt(c.createdAt) }}</time>
+                <span v-if="c.updatedAt" class="text-slate-400">· edited {{ fmt(c.updatedAt) }}</span>
               </div>
             </div>
+          </article>
+        </div>
 
-            <!-- Normal text -->
-            <div v-else>
-              <p class="mt-1 text-sm text-gray-700">{{ c.text }}</p>
-              <p v-if="c.updatedAt" class="text-xs text-gray-400">
-                Edited at {{ new Date(c.updatedAt).toLocaleString() }}
-              </p>
-            </div>
+        <EmptyState v-else class="text-slate-600">
+          No comments yet. Be the first to comment!
+        </EmptyState>
 
-            <!-- Evidence link -->
-            <a
-              v-if="c.imageUrl"
-              :href="c.imageUrl"
-              target="_blank"
-              rel="noopener"
-              class="mt-2 inline-block text-xs text-blue-600 hover:underline"
+        <!-- pagination -->
+        <div class="mt-5 flex flex-col items-center gap-2">
+          <Pagination
+            v-if="totalPages > 1"
+            :page="page"
+            :total-pages="totalPages"
+            @update:page="(p:number)=>page=p"
+          />
+          <p class="text-xs text-slate-500">
+            Showing {{ start + 1 }}–{{ Math.min(end, comments.length) }} of {{ comments.length }}
+          </p>
+        </div>
+      </div>
+
+      <!-- composer panel -->
+      <aside class="lg:sticky lg:top-16 h-max">
+        <div class="rounded-2xl border bg-white p-4 shadow-sm">
+          <h3 class="font-semibold">Add a comment</h3>
+          <p class="text-xs text-slate-500 mb-3">Plain text or a link (we’ll auto-link URLs).</p>
+
+          <form @submit.prevent="submit" class="space-y-3">
+            <textarea
+              v-model.trim="text"
+              rows="4"
+              placeholder="Share your thoughts…"
+              class="w-full rounded-lg border p-2 focus:outline-none focus:ring"
+              aria-label="comment text"
+            ></textarea>
+
+            <button
+              class="w-full rounded-md bg-blue-600 text-white py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              :disabled="!text"
             >
-              🔗 Evidence
-            </a>
+              Post comment
+            </button>
+          </form>
 
-            <!-- Actions (only for user comments) -->
-            <div v-if="!c.fromSeed" class="flex gap-2 mt-2 text-xs text-gray-500">
-              <button class="hover:underline" @click="startEdit(c)">Edit</button>
-              <button class="hover:underline text-red-500" @click="deleteComment(c.id)">
-                Delete
-              </button>
-            </div>
+          <div class="mt-4 text-xs text-slate-500">
+            <p>Be respectful. Comments may be moderated.</p>
           </div>
         </div>
-      </li>
-    </ul>
-  </section>
+      </aside>
+    </section>
+  </main>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { useRoute } from "vue-router";
-import { useNewsStore } from "@/stores/newsStore";
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import { useNewsStore } from '@/stores/newsStore'
+import EmptyState from '@/components/EmptyState.vue'
+import Pagination from '@/components/Pagination.vue'
 
-const route = useRoute();
-const newsStore = useNewsStore();
-const id = Number(route.params.id);
+const route = useRoute()
+const id = String(route.params.id)
+const store = useNewsStore()
 
-const text = ref("");
-const url = ref("");
-const editingId = ref<number | null>(null);
-const editText = ref("");
-const showComments = ref(false); // 👈 toggle visibility
-
-// All comments (seed + user)
-const comments = computed(() => newsStore.commentsFor(id));
-
-// Reset form
-function resetForm() {
-  text.value = "";
-  url.value = "";
-}
-
-// Add new comment
-function onSubmit() {
-  newsStore.addComment(id, text.value, url.value);
-  resetForm();
-  showComments.value = true; // 👈 auto-open after posting
-}
-
-// Edit helpers
-function startEdit(c: any) {
-  editingId.value = c.id;
-  editText.value = c.text;
-}
-function cancelEdit() {
-  editingId.value = null;
-  editText.value = "";
-}
-function saveEdit(commentId: number) {
-  if (editText.value.trim()) {
-    newsStore.editComment(id, commentId, editText.value.trim());
-    cancelEdit();
+onMounted(async () => {
+  if (!store.news.length && store.fetchNews) {
+    await store.fetchNews()
   }
+})
+
+const item = computed(() => store.news.find(n => String(n.id) === id) || null)
+const votes = computed(() => store.votesFor(id))
+const rawComments = computed(() => store.commentsFor(id))
+
+// sort + pagination
+const sort = ref<'new' | 'old'>('new')
+const comments = computed(() => {
+  const arr = [...rawComments.value]
+  if (sort.value === 'new') return arr.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+  return arr.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt))
+})
+const pageSize = 6
+const page = ref(1)
+const totalPages = computed(() => Math.max(1, Math.ceil(comments.value.length / pageSize)))
+const start = computed(() => (page.value - 1) * pageSize)
+const end   = computed(() => page.value * pageSize)
+const paged = computed(() => comments.value.slice(start.value, end.value))
+
+// add comment
+const text = ref('')
+async function submit() {
+  if (!text.value) return
+  await store.addComment(id, text.value)  // store persists to localStorage per your project spec
+  text.value = ''
+  page.value = 1
 }
 
-// Delete comment
-function deleteComment(commentId: number) {
-  newsStore.deleteComment(id, commentId);
+// helpers
+function isUrl(s: string) { try { new URL(s); return true } catch { return false } }
+function fmt(iso: string) { return new Date(iso).toLocaleString() }
+function avatarInitialFor(c: any) { return (c.author || 'U').slice(0, 2).toUpperCase() }
+function avatarBgFor(seed: number) {
+  const colors = ['bg-indigo-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500','bg-fuchsia-500']
+  return colors[seed % colors.length]
 }
 </script>

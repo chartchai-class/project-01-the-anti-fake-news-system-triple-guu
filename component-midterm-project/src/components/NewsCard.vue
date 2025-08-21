@@ -41,12 +41,15 @@
           </button>
         </div>
         <RouterLink
-          :to="`/news/${item.id}`"
-          class="btn-primary text-sm"
-          :aria-label="`View details for ${item.topic}`"
-        >
-          Details
-        </RouterLink>
+  :to="`/news/${item.id}`"
+  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg 
+         bg-blue-600 text-white text-sm font-medium shadow-sm 
+         hover:bg-blue-700 active:bg-blue-800 transition"
+  :aria-label="`View details for ${item.topic}`"
+>
+  Details →
+</RouterLink>
+
       </div>
 
       <!-- ✅ Comments -->

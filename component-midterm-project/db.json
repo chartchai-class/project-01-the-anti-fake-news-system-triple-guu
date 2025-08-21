@@ -74,7 +74,16 @@
       "createdAt": "2025-08-07T09:45:00Z"
     }
   ],
-  "userComments": [],
+  "userComments": [
+    {
+      "id": "5901",
+      "newsId": "1",
+      "text": "great",
+      "imageUrl": "",
+      "createdAt": "2025-08-21T09:47:40.863Z",
+      "author": "You"
+    }
+  ],
   "votes": [
     {
       "id": "5d2d",
@@ -177,6 +186,12 @@
       "newsId": "2",
       "dir": 1,
       "userId": "user-6wojkmi"
+    },
+    {
+      "id": "f3fe",
+      "newsId": "1",
+      "dir": -1,
+      "userId": "user-jui6wqb"
     }
   ]
 }
