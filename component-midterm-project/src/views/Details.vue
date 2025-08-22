@@ -1,18 +1,5 @@
 <template>
   <main class="mx-auto max-w-5xl">
-    <!-- top bar -->
-    <nav class="flex items-center justify-between gap-4 px-4 py-4 border-b bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60 sticky top-0 z-10">
-      <RouterLink to="/" class="text-sm text-blue-600 hover:underline">← Back</RouterLink>
-      <RouterLink
-        v-if="item"
-        :to="{ name: 'comments', params: { id } }"
-        class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-md border hover:bg-slate-50"
-        data-testid="details-comments-link"
-      >
-        💬 Comments <span class="text-xs text-slate-500">({{ comments.length }})</span>
-      </RouterLink>
-    </nav>
-
     <!-- missing -->
     <section v-if="!item" class="px-4 py-16 text-center text-slate-600">
       <p class="text-lg">This story couldn’t be found.</p>
@@ -82,17 +69,14 @@
           </p>
         </div>
 
-        <!-- quick actions -->
+        <!-- actions: back + comments -->
         <div class="mt-6 flex flex-wrap items-center gap-3">
-          <a
-            v-if="externalLink"
-            :href="externalLink"
-            target="_blank"
-            rel="noopener"
-            class="inline-flex items-center gap-2 text-sm text-blue-700 hover:underline"
+          <RouterLink
+            to="/"
+            class="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white text-sm px-3 py-2 hover:bg-blue-700"
           >
-            🔗 Open source link
-          </a>
+            ← Back
+          </RouterLink>
 
           <RouterLink
             :to="{ name: 'comments', params: { id } }"
@@ -103,11 +87,13 @@
         </div>
       </section>
 
-      <!-- child route outlet (renders comments page under the article if user navigates) -->
+      <!-- child route outlet -->
       <RouterView />
     </article>
   </main>
 </template>
+
+
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
