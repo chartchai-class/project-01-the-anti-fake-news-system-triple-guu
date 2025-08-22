@@ -1,12 +1,12 @@
 // src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteRecordRaw } from 'vue-router' // <- type-only import fixes your error
+import type { RouteRecordRaw } from 'vue-router' // type-only import
 
 // Lazy-loaded views
-const HomeView = () => import('../views/HomeView.vue')
+const HomeView  = () => import('../views/HomeView.vue')
 const Details   = () => import('../views/Details.vue')
 const Comments  = () => import('../views/Comments.vue')
-const AboutView  = () => import('../views/AboutView.vue')
+const AboutView = () => import('../views/AboutView.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -14,28 +14,31 @@ const routes: RouteRecordRaw[] = [
     name: 'home',
     component: HomeView,
   },
-  
   {
     path: '/about',
-    name: 'About',
+    name: 'about',
     component: AboutView,
   },
-
   {
+    // Details page (your app uses /news/:id)
     path: '/news/:id',
     name: 'details',
     component: Details,
-    props: true, // passes :id as a prop to Details
-    children: [
-      {
-        path: 'comments',
-        name: 'comments',
-        component: Comments,
-        props: true, // passes :id as a prop to Comments
-      },
-    ],
+    props: true,
+    // ❌ No children here — we removed the nested comments route
   },
-  // (optional) catch-all → send unknown routes to home
+  {
+    // Top-level comments page
+    path: '/comments/:id',
+    name: 'comments',
+    component: Comments,
+    props: true, // passes route.params.id as prop
+  },
+
+  // (optional) compatibility alias if any old links use /details/:id
+  // { path: '/details/:id', redirect: (to) => ({ name: 'details', params: to.params }) },
+
+  // (optional) catch-all to home
   // { path: '/:pathMatch(.*)*', redirect: { name: 'home' } },
 ]
 

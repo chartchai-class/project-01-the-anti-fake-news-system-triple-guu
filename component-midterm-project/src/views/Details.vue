@@ -15,7 +15,7 @@
             {{ item.topic }}
           </h1>
 
-          <!-- status badge -->
+        <!-- status badge -->
           <span
             class="px-2 py-1 text-xs font-semibold rounded-full shrink-0"
             :class="statusClass"
@@ -69,7 +69,7 @@
           </p>
         </div>
 
-        <!-- actions: back + comments -->
+        <!-- actions: back + comments (top-level comments page) -->
         <div class="mt-6 flex flex-wrap items-center gap-3">
           <RouterLink
             to="/"
@@ -86,18 +86,13 @@
           </RouterLink>
         </div>
       </section>
-
-      <!-- child route outlet -->
-      <RouterView />
     </article>
   </main>
 </template>
 
-
-
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useNewsStore } from '@/stores/newsStore'
 
 const newsStore = useNewsStore()
@@ -153,11 +148,5 @@ const avatarPalette = ['bg-indigo-500', 'bg-rose-500', 'bg-amber-500', 'bg-emera
 const avatarBg = computed(() => {
   const i = (String(item.value?.id || 0).length + (item.value?.reporter?.length || 0)) % avatarPalette.length
   return avatarPalette[i]
-})
-
-const externalLink = computed(() => {
-  // If your item has a link field, expose it; else fall back to image url as a demo “source”.
-  // Change this to match your data model if needed.
-  return (item.value as any)?.link || item.value?.image || ''
 })
 </script>
