@@ -6,6 +6,7 @@ import type { RouteRecordRaw } from 'vue-router' // <- type-only import fixes yo
 const HomeView = () => import('../views/HomeView.vue')
 const Details   = () => import('../views/Details.vue')
 const Comments  = () => import('../views/Comments.vue')
+const AboutView  = () => import('../views/AboutView.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -13,6 +14,13 @@ const routes: RouteRecordRaw[] = [
     name: 'home',
     component: HomeView,
   },
+  
+  {
+    path: '/about',
+    name: 'About',
+    component: AboutView,
+  },
+
   {
     path: '/news/:id',
     name: 'details',
