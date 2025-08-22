@@ -7,6 +7,7 @@ const HomeView  = () => import('../views/HomeView.vue')
 const Details   = () => import('../views/Details.vue')
 const Comments  = () => import('../views/Comments.vue')
 const AboutView = () => import('../views/AboutView.vue')
+const PostView = () => import('../views/PostView.vue')
 
 const routes: RouteRecordRaw[] = [
   {
@@ -19,6 +20,12 @@ const routes: RouteRecordRaw[] = [
     name: 'about',
     component: AboutView,
   },
+    {
+    path: '/post',
+    name: 'post',
+    component:PostView
+  },
+
   {
     // Details page (your app uses /news/:id)
     path: '/news/:id',

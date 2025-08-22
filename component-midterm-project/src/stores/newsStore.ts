@@ -1,3 +1,4 @@
+// src/stores/newsStore.ts
 import { defineStore } from "pinia";
 
 // ---- user id per browser ----
@@ -11,12 +12,20 @@ function getUserId() {
 }
 const userId = getUserId();
 
-// ---- API base (Railway or local). Set VITE_API_BASE to e.g. https://your-api.up.railway.app
+// ---- API base (Railway or local). Set VITE_API_BASE in .env
 const API_BASE = (import.meta as any)?.env?.VITE_API_BASE
   ? String((import.meta as any).env.VITE_API_BASE).replace(/\/+$/, "")
   : "";
 
-// ---- localStorage helpers for read-only mode ----
+// centralize endpoints (edit here if your API uses a prefix like /api)
+const EP = {
+  news: `${API_BASE}/news`,
+  comments: `${API_BASE}/comments`,
+  votes: `${API_BASE}/votes`,
+  userComments: `${API_BASE}/userComments`,
+};
+
+// ---- localStorage helpers ----
 const ls = {
   get<T>(key: string, fallback: T): T {
     try {
@@ -33,14 +42,38 @@ const ls = {
   },
 };
 
+type NewsItem = {
+  id: number | string;
+  topic: string;
+  short: string;
+  detail?: string;
+  link?: string;
+  image?: string;
+  reporter?: string;
+  reportedAt: string;
+};
+
+// helpers
+function sortByReportedAtDesc(a: Partial<NewsItem>, b: Partial<NewsItem>) {
+  const da = a.reportedAt ? +new Date(a.reportedAt) : 0;
+  const db = b.reportedAt ? +new Date(b.reportedAt) : 0;
+  return db - da;
+}
+function mergeUniqueById<T extends { id: any }>(arr: T[], item: T) {
+  const id = String(item.id);
+  const without = arr.filter((x) => String(x.id) !== id);
+  return [item, ...without];
+}
+
 export const useNewsStore = defineStore("news", {
   state: () => ({
-    news: [] as any[],
+    news: [] as NewsItem[],
     commentsSeed: [] as any[],
-    votes: [] as any[],        // from API or localStorage (readOnly)
-    userComments: [] as any[], // from API or localStorage (readOnly)
+    votes: [] as any[],
+    userComments: [] as any[],
 
-    filter: "all" as "all" | "fake" | "non-fake" | "neutral",
+    // ⚠️ only the filters you want
+    filter: "all" as "all" | "fake" | "non-fake",
     perPage: 6,
     currentPage: 1,
 
@@ -54,7 +87,6 @@ export const useNewsStore = defineStore("news", {
         const id = String(newsId);
         const seed = state.commentsSeed.filter((c) => String(c.newsId) === id);
         const user = state.userComments.filter((c) => String(c.newsId) === id);
-        // newest first
         return [...seed, ...user].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
@@ -79,20 +111,20 @@ export const useNewsStore = defineStore("news", {
         const votes = state.votes.filter((v) => String(v.newsId) === id);
         const up = votes.filter((v) => v.dir === 1).length;
         const down = votes.filter((v) => v.dir === -1).length;
-
         if (up > down) return "non-fake";
         if (down > up) return "fake";
+        // no need to expose "neutral" as a filter; All will include it
         return "neutral";
       };
     },
 
-    filteredNews: (state): any[] => {
+    filteredNews: (state): NewsItem[] => {
       if (state.filter === "all") return state.news;
       // @ts-ignore access getter
       return state.news.filter((n) => (state as any).statusFor(n.id) === state.filter);
     },
 
-    pagedNews: (state): any[] => {
+    pagedNews: (state): NewsItem[] => {
       const start = (state.currentPage - 1) * state.perPage;
       // @ts-ignore access getter
       return (state as any).filteredNews.slice(start, start + state.perPage);
@@ -107,19 +139,19 @@ export const useNewsStore = defineStore("news", {
 
   actions: {
     async fetchNews() {
-      // Prefer API when configured
       if (API_BASE) {
         try {
           const [news, comments, votes, userComments] = await Promise.all([
-            fetch(`${API_BASE}/news`).then((r) => r.json()),
-            fetch(`${API_BASE}/comments`).then((r) => r.json()),
-            fetch(`${API_BASE}/votes`).then((r) => r.json()),
-            fetch(`${API_BASE}/userComments`).then((r) => r.json()),
+            fetch(EP.news, { cache: "no-store" }).then((r) => r.json()),
+            fetch(EP.comments, { cache: "no-store" }).then((r) => r.json()),
+            fetch(EP.votes, { cache: "no-store" }).then((r) => r.json()),
+            fetch(EP.userComments, { cache: "no-store" }).then((r) => r.json()),
           ]);
-          this.news = news;
-          this.commentsSeed = comments;
-          this.votes = votes;
-          this.userComments = userComments;
+          const list = Array.isArray(news) ? news : [];
+          this.news = list.sort(sortByReportedAtDesc);
+          this.commentsSeed = Array.isArray(comments) ? comments : [];
+          this.votes = Array.isArray(votes) ? votes : [];
+          this.userComments = Array.isArray(userComments) ? userComments : [];
           this.readOnly = false;
           return;
         } catch (e) {
@@ -127,14 +159,61 @@ export const useNewsStore = defineStore("news", {
         }
       }
 
-      // Fallback: static file served by Vercel (/public/db.json)
+      // Fallback: /db.json + locally created news (userNews)
       const db = await fetch("/db.json", { cache: "no-store" }).then((r) => r.json());
-      this.news = db.news || [];
+      const seedNews: NewsItem[] = db.news || [];
+      const localUserNews: NewsItem[] = ls.get("userNews", [] as NewsItem[]);
+      this.news = [...localUserNews, ...seedNews].sort(sortByReportedAtDesc);
       this.commentsSeed = db.comments || [];
-      // Keep votes/comments in localStorage so demo still works
       this.votes = ls.get("votes", db.votes || []);
       this.userComments = ls.get("userComments", db.userComments || []);
       this.readOnly = true;
+    },
+
+    // Create a news item. Writes to your API when available; otherwise to localStorage.
+    async addNews(payload: Omit<NewsItem, "id"> | Partial<NewsItem>) {
+      let created: NewsItem;
+
+      if (API_BASE && !this.readOnly) {
+        const res = await fetch(EP.news, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`Failed to create news (status ${res.status})`);
+        const raw = await res.json();
+        created = (raw && (raw.data || raw)) as NewsItem;
+      } else {
+        const userNews = ls.get<NewsItem[]>("userNews", []);
+        const id = Date.now(); // local id
+        created = {
+          id,
+          topic: payload.topic || "",
+          short: payload.short || "",
+          detail: payload.detail || "",
+          link: payload.link || "",
+          image: payload.image || "",
+          reporter: payload.reporter || "You",
+          reportedAt: payload.reportedAt || new Date().toISOString(),
+        };
+        userNews.unshift(created);
+        ls.set("userNews", userNews);
+      }
+
+      // ✅ make it appear immediately at the top (no duplicates)
+      this.news = mergeUniqueById(this.news, created).sort(sortByReportedAtDesc);
+      this.currentPage = 1; // ensure visible on Home first page
+
+      // ✅ If API mode, refresh from server to reflect canonical data
+      if (API_BASE && !this.readOnly) {
+        try {
+          await this.fetchNews();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      return created;
     },
 
     async vote(newsId: number, dir: 1 | -1) {
@@ -145,7 +224,7 @@ export const useNewsStore = defineStore("news", {
           let existing = this.votes.find((v) => String(v.newsId) === id && v.userId === userId);
 
           if (!existing) {
-            const res = await fetch(`${API_BASE}/votes`, {
+            const res = await fetch(EP.votes, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ newsId: id, dir, userId }),
@@ -153,7 +232,7 @@ export const useNewsStore = defineStore("news", {
             const saved = await res.json();
             this.votes.push(saved);
           } else {
-            await fetch(`${API_BASE}/votes/${existing.id}`, {
+            await fetch(`${EP.votes}/${existing.id}`, {
               method: "PATCH",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ dir }),
@@ -162,14 +241,14 @@ export const useNewsStore = defineStore("news", {
           }
 
           // refresh from server
-          this.votes = await (await fetch(`${API_BASE}/votes`)).json();
+          this.votes = await (await fetch(EP.votes, { cache: "no-store" })).json();
         } catch (err) {
           console.error("Voting failed:", err);
         }
         return;
       }
 
-      // Read-only: store locally
+      // Read-only: local
       let existing = this.votes.find((v) => String(v.newsId) === id && v.userId === userId);
       if (!existing) {
         existing = { id: Math.random().toString(36).slice(2, 6), newsId: id, dir, userId };
@@ -191,7 +270,7 @@ export const useNewsStore = defineStore("news", {
       };
 
       if (!this.readOnly && API_BASE) {
-        const res = await fetch(`${API_BASE}/userComments`, {
+        const res = await fetch(EP.userComments, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -201,7 +280,6 @@ export const useNewsStore = defineStore("news", {
         return;
       }
 
-      // read-only: local only
       const saved = { ...payload, id: Date.now() };
       this.userComments.push(saved);
       ls.set("userComments", this.userComments);
@@ -209,7 +287,7 @@ export const useNewsStore = defineStore("news", {
 
     async editComment(newsId: number, commentId: number, newText: string) {
       if (!this.readOnly && API_BASE) {
-        await fetch(`${API_BASE}/userComments/${commentId}`, {
+        await fetch(`${EP.userComments}/${commentId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: newText, updatedAt: new Date().toISOString() }),
@@ -229,7 +307,7 @@ export const useNewsStore = defineStore("news", {
 
     async deleteComment(newsId: number, commentId: number) {
       if (!this.readOnly && API_BASE) {
-        await fetch(`${API_BASE}/userComments/${commentId}`, { method: "DELETE" });
+        await fetch(`${EP.userComments}/${commentId}`, { method: "DELETE" });
         this.userComments = this.userComments.filter((c) => c.id !== commentId);
         return;
       }
@@ -238,7 +316,7 @@ export const useNewsStore = defineStore("news", {
       ls.set("userComments", this.userComments);
     },
 
-    setFilter(filter: "all" | "fake" | "non-fake" | "neutral") {
+    setFilter(filter: "all" | "fake" | "non-fake") {
       this.filter = filter;
       this.currentPage = 1;
     },

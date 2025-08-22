@@ -12,12 +12,24 @@
       </p>
     </header>
 
-    <!-- Filter (in a soft card) -->
+    <!-- Filter card -->
     <section
       class="rounded-xl border border-slate-200 bg-white/80 backdrop-blur px-4 py-3 sm:px-5 sm:py-4 shadow-sm"
       aria-label="Filters"
     >
-      <FilterBar />
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <!-- Keep FilterBar’s own per-page; it controls uiStore.pageSize -->
+        <FilterBar />
+
+        <!-- Post button (upper-right of the card) -->
+        <RouterLink
+          :to="{ name: 'post' }"
+          class="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-3 py-2 text-sm font-medium hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+        >
+          <span aria-hidden="true"></span>
+          <span>Add news</span>
+        </RouterLink>
+      </div>
     </section>
 
     <!-- Loading skeleton grid -->
@@ -45,14 +57,15 @@
           <NewsCard v-for="n in pagedNews" :key="n.id" :item="n" />
         </div>
 
-        <!-- Pagination -->
+        <!-- Pagination row (numbers only) -->
         <div class="mt-6 flex flex-col items-center gap-2">
           <Pagination
             :page="uiStore.page"
             :total-pages="totalPages"
             @update:page="onPageChange"
           />
-          <!-- Results summary (guarded) -->
+
+          <!-- Results summary -->
           <p class="text-xs sm:text-sm text-slate-500">
             Showing {{ resultStart }}–{{ resultEnd }} of {{ filteredNews.length }} results
           </p>
@@ -64,6 +77,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, watch } from "vue";
+import { RouterLink } from "vue-router";
 import { useNewsStore } from "@/stores/newsStore";
 import { useUiStore } from "@/stores/uiStore";
 
@@ -104,9 +118,15 @@ const resultEnd = computed(() =>
   Math.min(uiStore.endIndex, filteredNews.value.length)
 );
 
-// Reset to first page when filter changes (prevents empty pages)
+// Reset to first page when filter changes
 watch(
   () => uiStore.filter,
+  () => uiStore.setPage(1)
+);
+
+// Also reset when page size changes (FilterBar updates uiStore.pageSize)
+watch(
+  () => uiStore.pageSize,
   () => uiStore.setPage(1)
 );
 
