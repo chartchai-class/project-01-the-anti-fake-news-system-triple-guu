@@ -20,7 +20,7 @@ A community‑driven web app where users can post news claims, vote **Fake/Non�
 ## 🔗 Project Links (fill these before submitting)
 
 - **Live site (Vercel):**   https://project-01-the-anti-fake-news-syste-mu.vercel.app/
-- **Demo video (2–3 min):** https://youtu.be/xxxxxxxxxxx  
+- **Demo video (2–3 min):** https://drive.google.com/file/d/1zjWq6eqYJoH1kZlhBQrCG6CLzdDRMkcE/view?usp=drive_link 
 - **Repository:** https://github.com/chartchai-class/project-01-the-anti-fake-news-system-triple-guu.git
 - **API link**              https://news-api-production-3197.up.railway.app   
 - **API github link**       https://github.com/Juzuu24/news-api.git         
