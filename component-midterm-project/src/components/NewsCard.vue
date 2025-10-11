@@ -1,13 +1,15 @@
 <template>
   <article class="card overflow-hidden" :aria-labelledby="`title-${item.id}`">
+    <!-- 🖼️ News Image -->
     <img
-      :src="item.image || '/default.jpg'"
+      :src="item.imageUrl || item.image || '/default.jpg'"
       :alt="item.topic"
       loading="lazy"
       class="h-44 w-full object-cover"
     />
 
     <div class="p-4 flex flex-col gap-3">
+      <!-- 📰 Title & Status -->
       <div class="flex items-center justify-between">
         <h3 :id="`title-${item.id}`" class="text-lg font-semibold line-clamp-1">
           {{ item.topic }}
@@ -20,22 +22,25 @@
             'px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700': status === 'neutral'
           }"
         >
-          {{ status === 'fake' ? 'Fake' : status === 'non-fake' ? 'Non-fake' : 'Neutral' }}
+          {{ statusLabel }}
         </span>
       </div>
 
+      <!-- 🧾 Short Description -->
       <p class="text-sm text-gray-600 line-clamp-2">{{ item.short }}</p>
 
+      <!-- 👤 Reporter + Date -->
       <p class="text-xs text-gray-500">
-        By {{ item.reporter }} · {{ new Date(item.reportedAt).toLocaleDateString() }}
+        By {{ item.reporter || "Unknown" }} · {{ formatDate(item.date || item.reportedAt) }}
       </p>
 
+      <!-- 👍 Voting + Buttons -->
       <div class="flex items-center justify-between pt-2">
         <div class="flex items-center gap-3">
-          <button @click.stop="vote(1)" class="text-sm hover:underline">
+          <button @click.stop="vote(1)" class="text-sm hover:text-blue-600 transition">
             👍 {{ votes.up }}
           </button>
-          <button @click.stop="vote(-1)" class="text-sm hover:underline">
+          <button @click.stop="vote(-1)" class="text-sm hover:text-blue-600 transition">
             👎 {{ votes.down }}
           </button>
         </div>
@@ -51,7 +56,7 @@
             Details →
           </RouterLink>
 
-          <!-- 🔗 Share Button -->
+          <!-- 🔗 Share -->
           <button
             @click.stop="shareNews"
             class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg
@@ -63,7 +68,7 @@
         </div>
       </div>
 
-      <!-- 💬 Comments Section -->
+      <!-- 💬 Comments -->
       <div class="mt-3 border-t pt-2">
         <button
           @click="toggleComments"
@@ -73,7 +78,7 @@
         </button>
 
         <div v-if="showComments">
-          <!-- ✅ Comment Form with Emoji Picker -->
+          <!-- ✏️ Add Comment -->
           <form @submit.prevent="addNewComment" class="flex flex-col gap-2 mb-2 relative">
             <div class="relative">
               <textarea
@@ -83,7 +88,6 @@
                 rows="2"
               ></textarea>
 
-              <!-- 😊 Emoji Toggle Button -->
               <button
                 type="button"
                 @click="showEmoji = !showEmoji"
@@ -92,7 +96,6 @@
                 😊
               </button>
 
-              <!-- 🎨 Emoji Picker Popup -->
               <emoji-picker
                 v-if="showEmoji"
                 class="absolute bottom-12 right-0 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border p-2"
@@ -103,7 +106,7 @@
             <button type="submit" class="btn-primary text-sm self-end">Post</button>
           </form>
 
-          <!-- ✅ Comments List -->
+          <!-- 💭 Comment List -->
           <ul v-if="comments.length" class="space-y-2 max-h-40 overflow-y-auto">
             <li v-for="c in comments" :key="c.id" class="comment-card">
               <div v-if="editingId === c.id">
@@ -116,9 +119,9 @@
 
               <div v-else>
                 <p class="comment-text">{{ c.text }}</p>
-                <span class="comment-meta">· {{ new Date(c.createdAt).toLocaleString() }}</span>
+                <span class="comment-meta">· {{ formatDateTime(c.createdAt) }}</span>
                 <p v-if="c.updatedAt" class="comment-meta">
-                  (edited {{ new Date(c.updatedAt).toLocaleString() }})
+                  (edited {{ formatDateTime(c.updatedAt) }})
                 </p>
 
                 <div v-if="!c.fromSeed" class="flex gap-3 mt-1 text-xs">
@@ -139,25 +142,55 @@
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
-import { useNewsStore } from '@/stores/newsStore';
-import { computed, ref } from 'vue';
-import 'emoji-picker-element';
+import { RouterLink } from "vue-router";
+import { useNewsStore } from "@/stores/newsStore";
+import { computed, ref } from "vue";
+import "emoji-picker-element";
 
 const props = defineProps<{ item: any }>();
 const newsStore = useNewsStore();
 
+// ✅ Computed status & votes
 const status = computed(() => newsStore.statusFor(props.item.id));
 const votes = computed(() => newsStore.votesFor(props.item.id));
 
+const statusLabel = computed(() =>
+  status.value === "fake"
+    ? "Fake"
+    : status.value === "non-fake"
+    ? "Non-fake"
+    : "Neutral"
+);
+
+// ✅ Date formatter (fix Invalid Date)
+function formatDate(value: any) {
+  if (!value) return "Unknown Date";
+  const date = new Date(value);
+  if (isNaN(date)) return "Unknown Date";
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// ✅ Time formatter for comments
+function formatDateTime(value: any) {
+  const date = new Date(value);
+  if (isNaN(date)) return "Unknown time";
+  return date.toLocaleString();
+}
+
+// 🗳️ Voting
 async function vote(dir: 1 | -1) {
   await newsStore.vote(props.item.id, dir);
 }
 
-const newComment = ref('');
+// 💬 Comments
+const newComment = ref("");
 const comments = computed(() => newsStore.commentsFor(props.item.id));
 const showComments = ref(false);
-const showEmoji = ref(false); // ✅ controls emoji picker
+const showEmoji = ref(false);
 
 function toggleComments() {
   showComments.value = !showComments.value;
@@ -166,7 +199,7 @@ function toggleComments() {
 async function addNewComment() {
   if (newComment.value.trim()) {
     await newsStore.addComment(props.item.id, newComment.value.trim());
-    newComment.value = '';
+    newComment.value = "";
     showComments.value = true;
   }
 }
@@ -176,8 +209,9 @@ function addEmoji(e: any) {
   showEmoji.value = false;
 }
 
+// ✏️ Edit / Delete
 const editingId = ref<number | null>(null);
-const editText = ref('');
+const editText = ref("");
 
 function startEdit(c: any) {
   editingId.value = c.id;
@@ -185,7 +219,7 @@ function startEdit(c: any) {
 }
 function cancelEdit() {
   editingId.value = null;
-  editText.value = '';
+  editText.value = "";
 }
 async function saveEdit(commentId: number) {
   if (editText.value.trim()) {
@@ -197,7 +231,7 @@ async function deleteComment(commentId: number) {
   await newsStore.deleteComment(props.item.id, commentId);
 }
 
-// ✅ Share logic
+// 🔗 Share
 function shareNews() {
   const shareData = {
     title: props.item.topic,
@@ -209,7 +243,7 @@ function shareNews() {
     navigator.share(shareData).catch(() => {});
   } else {
     navigator.clipboard.writeText(shareData.url);
-    alert('✅ Link copied to clipboard!');
+    alert("✅ Link copied to clipboard!");
   }
 }
 </script>

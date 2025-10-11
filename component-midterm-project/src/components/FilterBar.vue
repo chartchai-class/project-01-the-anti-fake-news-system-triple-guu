@@ -2,7 +2,6 @@
   <div
     class="card p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between flex-wrap"
   >
-    <!-- 🔍 Search Box -->
     <div class="flex items-center gap-3 w-full sm:w-auto flex-1">
       <label for="search" class="text-sm font-medium">Search:</label>
       <input
@@ -17,7 +16,6 @@
       />
     </div>
 
-    <!-- Filter -->
     <div class="flex items-center gap-3">
       <label for="status" class="text-sm font-medium">Filter:</label>
       <select
@@ -34,7 +32,6 @@
       </select>
     </div>
 
-    <!-- Per page input -->
     <div class="flex items-center gap-3">
       <label for="pageSizeInput" class="text-sm font-medium">Per page:</label>
       <input
@@ -46,11 +43,23 @@
         class="border rounded px-2 py-1 w-20 border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
         aria-label="Type number of news items per page"
       />
+
+      <RouterLink
+        v-if="userRole === 'member'"
+        to="/news/create"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium text-sm transition"
+      >
+        + Create News
+      </RouterLink>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useUiStore } from "@/stores/uiStore";
+import { ref } from "vue";
+import { RouterLink } from "vue-router";
+
 const uiStore = useUiStore();
+const userRole = ref("member");
 </script>
