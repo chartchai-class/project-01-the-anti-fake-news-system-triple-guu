@@ -12,7 +12,6 @@
           {{ item.topic }}
         </h3>
 
-        <!-- ✅ Direct Tailwind classes -->
         <span
           :class="{
             'px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700': status === 'fake',
@@ -30,7 +29,6 @@
         By {{ item.reporter }} · {{ new Date(item.reportedAt).toLocaleDateString() }}
       </p>
 
-      <!-- ✅ Votes -->
       <div class="flex items-center justify-between pt-2">
         <div class="flex items-center gap-3">
           <button @click.stop="vote(1)" class="text-sm hover:underline">
@@ -42,8 +40,8 @@
         </div>
         <RouterLink
   :to="`/news/${item.id}`"
-  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg 
-         bg-blue-600 text-white text-sm font-medium shadow-sm 
+  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg
+         bg-blue-600 text-white text-sm font-medium shadow-sm
          hover:bg-blue-700 active:bg-blue-800 transition"
   :aria-label="`View details for ${item.topic}`"
 >
@@ -52,7 +50,6 @@
 
       </div>
 
-      <!-- ✅ Comments -->
       <div class="mt-3 border-t pt-2">
         <button
           @click="toggleComments"
@@ -72,31 +69,37 @@
           </form>
 
           <ul v-if="comments.length" class="space-y-2 max-h-40 overflow-y-auto">
-            <li v-for="c in comments" :key="c.id" class="text-sm bg-gray-100 p-2 rounded">
-              <div v-if="editingId === c.id">
-                <textarea v-model="editText" rows="2" class="w-full border rounded p-1"></textarea>
-                <div class="flex gap-2 mt-1 text-xs">
-                  <button class="btn-primary px-2" @click="saveEdit(c.id)">Save</button>
-                  <button class="btn-ghost px-2" @click="cancelEdit">Cancel</button>
-                </div>
-              </div>
+  <li
+    v-for="c in comments"
+    :key="c.id"
+    class="comment-card"
+  >
+    <div v-if="editingId === c.id">
+      <textarea v-model="editText" rows="2" class="w-full border rounded p-1"></textarea>
+      <div class="flex gap-2 mt-1 text-xs">
+        <button class="comment-save" @click="saveEdit(c.id)">Save</button>
+<button class="comment-cancel" @click="cancelEdit">Cancel</button>
 
-              <div v-else>
-                <p>{{ c.text }}</p>
-                <span class="text-xs text-gray-500">· {{ new Date(c.createdAt).toLocaleString() }}</span>
-                <p v-if="c.updatedAt" class="text-xs text-gray-400">
-                  (edited {{ new Date(c.updatedAt).toLocaleString() }})
-                </p>
+      </div>
+    </div>
 
-                <div v-if="!c.fromSeed" class="flex gap-3 mt-1 text-xs text-gray-500">
-                  <button @click="startEdit(c)" class="hover:underline">Edit</button>
-                  <button @click="deleteComment(c.id)" class="hover:underline text-red-500">
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </li>
-          </ul>
+    <div v-else>
+      <p class="comment-text">{{ c.text }}</p>
+      <span class="comment-meta">· {{ new Date(c.createdAt).toLocaleString() }}</span>
+      <p v-if="c.updatedAt" class="comment-meta">
+        (edited {{ new Date(c.updatedAt).toLocaleString() }})
+      </p>
+
+      <div v-if="!c.fromSeed" class="flex gap-3 mt-1 text-xs">
+<button @click="startEdit(c)" class="comment-edit">Edit</button>
+        <button @click="deleteComment(c.id)" class="hover:underline comment-delete">
+          Delete
+        </button>
+      </div>
+    </div>
+  </li>
+</ul>
+
 
           <p v-else class="text-xs text-gray-500">No comments yet.</p>
         </div>
@@ -113,16 +116,13 @@ import { computed, ref } from "vue";
 const props = defineProps<{ item: any }>();
 const newsStore = useNewsStore();
 
-// ✅ status from store
 const status = computed(() => newsStore.statusFor(props.item.id));
 
-// ✅ votes
 const votes = computed(() => newsStore.votesFor(props.item.id));
 async function vote(dir: 1 | -1) {
   await newsStore.vote(props.item.id, dir);
 }
 
-// ✅ comments
 const newComment = ref("");
 const comments = computed(() => newsStore.commentsFor(props.item.id));
 const showComments = ref(false);
@@ -139,7 +139,6 @@ async function addNewComment() {
   }
 }
 
-// ✅ edit/delete
 const editingId = ref<number | null>(null);
 const editText = ref("");
 

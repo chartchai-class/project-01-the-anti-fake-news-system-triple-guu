@@ -82,6 +82,32 @@
       "imageUrl": "",
       "createdAt": "2025-08-21T09:47:40.863Z",
       "author": "You"
+    },
+    {
+      "id": "dbdb",
+      "newsId": "1",
+      "text": "hello",
+      "imageUrl": "",
+      "createdAt": "2025-10-11T04:59:08.370Z",
+      "author": "You",
+      "updatedAt": "2025-10-11T05:27:42.710Z"
+    },
+    {
+      "id": "0839",
+      "newsId": "1",
+      "text": "dffdfd",
+      "imageUrl": "",
+      "createdAt": "2025-10-11T05:06:10.523Z",
+      "author": "You",
+      "updatedAt": "2025-10-11T05:27:39.229Z"
+    },
+    {
+      "id": "fff3",
+      "newsId": "1",
+      "text": "love",
+      "imageUrl": "",
+      "createdAt": "2025-10-11T05:36:07.520Z",
+      "author": "You"
     }
   ],
   "votes": [
@@ -192,6 +218,18 @@
       "newsId": "1",
       "dir": -1,
       "userId": "user-jui6wqb"
+    },
+    {
+      "id": "e68c",
+      "newsId": "1",
+      "dir": -1,
+      "userId": "user-k4v8t99"
+    },
+    {
+      "id": "13ab",
+      "newsId": "2",
+      "dir": 1,
+      "userId": "user-k4v8t99"
     }
   ]
 }

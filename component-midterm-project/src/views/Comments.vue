@@ -49,7 +49,8 @@
             </div>
 
             <!-- bubble -->
-            <div class="rounded-xl border bg-white p-3">
+            <div class="comment-card rounded-xl border p-3">
+
               <p class="text-sm whitespace-pre-line break-words">
                 <span v-if="isUrl(c.text)">
                   <a :href="c.text" target="_blank" rel="noopener" class="text-blue-600 underline">
