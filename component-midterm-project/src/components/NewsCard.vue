@@ -63,6 +63,7 @@
         </div>
       </div>
 
+      <!-- 💬 Comments Section -->
       <div class="mt-3 border-t pt-2">
         <button
           @click="toggleComments"
@@ -72,15 +73,37 @@
         </button>
 
         <div v-if="showComments">
-          <form @submit.prevent="addNewComment" class="flex gap-2 mb-2">
-            <input
-              v-model="newComment"
-              placeholder="Write a comment..."
-              class="border p-1 flex-1 rounded text-sm"
-            />
-            <button type="submit" class="btn-primary text-sm">Post</button>
+          <!-- ✅ Comment Form with Emoji Picker -->
+          <form @submit.prevent="addNewComment" class="flex flex-col gap-2 mb-2 relative">
+            <div class="relative">
+              <textarea
+                v-model="newComment"
+                placeholder="Write a comment..."
+                class="border p-2 w-full rounded text-sm resize-none pr-10"
+                rows="2"
+              ></textarea>
+
+              <!-- 😊 Emoji Toggle Button -->
+              <button
+                type="button"
+                @click="showEmoji = !showEmoji"
+                class="absolute right-2 bottom-2 text-lg"
+              >
+                😊
+              </button>
+
+              <!-- 🎨 Emoji Picker Popup -->
+              <emoji-picker
+                v-if="showEmoji"
+                class="absolute bottom-12 right-0 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg border p-2"
+                @emoji-click="addEmoji"
+              ></emoji-picker>
+            </div>
+
+            <button type="submit" class="btn-primary text-sm self-end">Post</button>
           </form>
 
+          <!-- ✅ Comments List -->
           <ul v-if="comments.length" class="space-y-2 max-h-40 overflow-y-auto">
             <li v-for="c in comments" :key="c.id" class="comment-card">
               <div v-if="editingId === c.id">
@@ -119,13 +142,14 @@
 import { RouterLink } from 'vue-router';
 import { useNewsStore } from '@/stores/newsStore';
 import { computed, ref } from 'vue';
+import 'emoji-picker-element';
 
 const props = defineProps<{ item: any }>();
 const newsStore = useNewsStore();
 
 const status = computed(() => newsStore.statusFor(props.item.id));
-
 const votes = computed(() => newsStore.votesFor(props.item.id));
+
 async function vote(dir: 1 | -1) {
   await newsStore.vote(props.item.id, dir);
 }
@@ -133,6 +157,7 @@ async function vote(dir: 1 | -1) {
 const newComment = ref('');
 const comments = computed(() => newsStore.commentsFor(props.item.id));
 const showComments = ref(false);
+const showEmoji = ref(false); // ✅ controls emoji picker
 
 function toggleComments() {
   showComments.value = !showComments.value;
@@ -144,6 +169,11 @@ async function addNewComment() {
     newComment.value = '';
     showComments.value = true;
   }
+}
+
+function addEmoji(e: any) {
+  newComment.value += e.detail.unicode;
+  showEmoji.value = false;
 }
 
 const editingId = ref<number | null>(null);
@@ -183,3 +213,10 @@ function shareNews() {
   }
 }
 </script>
+
+<style scoped>
+emoji-picker {
+  width: 250px;
+  height: 300px;
+}
+</style>
