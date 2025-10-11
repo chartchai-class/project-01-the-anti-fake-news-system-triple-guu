@@ -6,6 +6,7 @@
       loading="lazy"
       class="h-44 w-full object-cover"
     />
+
     <div class="p-4 flex flex-col gap-3">
       <div class="flex items-center justify-between">
         <h3 :id="`title-${item.id}`" class="text-lg font-semibold line-clamp-1">
@@ -19,7 +20,7 @@
             'px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700': status === 'neutral'
           }"
         >
-          {{ status === "fake" ? "Fake" : status === "non-fake" ? "Non-fake" : "Neutral" }}
+          {{ status === 'fake' ? 'Fake' : status === 'non-fake' ? 'Non-fake' : 'Neutral' }}
         </span>
       </div>
 
@@ -38,16 +39,28 @@
             👎 {{ votes.down }}
           </button>
         </div>
-        <RouterLink
-  :to="`/news/${item.id}`"
-  class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg
-         bg-blue-600 text-white text-sm font-medium shadow-sm
-         hover:bg-blue-700 active:bg-blue-800 transition"
-  :aria-label="`View details for ${item.topic}`"
->
-  Details →
-</RouterLink>
 
+        <div class="flex items-center gap-2">
+          <RouterLink
+            :to="`/news/${item.id}`"
+            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg
+                   bg-blue-600 text-white text-sm font-medium shadow-sm
+                   hover:bg-blue-700 active:bg-blue-800 transition"
+            :aria-label="`View details for ${item.topic}`"
+          >
+            Details →
+          </RouterLink>
+
+          <!-- 🔗 Share Button -->
+          <button
+            @click.stop="shareNews"
+            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg
+                   bg-slate-200 text-slate-700 text-sm font-medium shadow-sm
+                   hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 transition"
+          >
+            🔗 Share
+          </button>
+        </div>
       </div>
 
       <div class="mt-3 border-t pt-2">
@@ -55,7 +68,7 @@
           @click="toggleComments"
           class="text-xs text-blue-600 hover:underline mb-2"
         >
-          {{ showComments ? "Hide comments" : "View comments (" + comments.length + ")" }}
+          {{ showComments ? 'Hide comments' : 'View comments (' + comments.length + ')' }}
         </button>
 
         <div v-if="showComments">
@@ -69,37 +82,31 @@
           </form>
 
           <ul v-if="comments.length" class="space-y-2 max-h-40 overflow-y-auto">
-  <li
-    v-for="c in comments"
-    :key="c.id"
-    class="comment-card"
-  >
-    <div v-if="editingId === c.id">
-      <textarea v-model="editText" rows="2" class="w-full border rounded p-1"></textarea>
-      <div class="flex gap-2 mt-1 text-xs">
-        <button class="comment-save" @click="saveEdit(c.id)">Save</button>
-<button class="comment-cancel" @click="cancelEdit">Cancel</button>
+            <li v-for="c in comments" :key="c.id" class="comment-card">
+              <div v-if="editingId === c.id">
+                <textarea v-model="editText" rows="2" class="w-full border rounded p-1"></textarea>
+                <div class="flex gap-2 mt-1 text-xs">
+                  <button class="comment-save" @click="saveEdit(c.id)">Save</button>
+                  <button class="comment-cancel" @click="cancelEdit">Cancel</button>
+                </div>
+              </div>
 
-      </div>
-    </div>
+              <div v-else>
+                <p class="comment-text">{{ c.text }}</p>
+                <span class="comment-meta">· {{ new Date(c.createdAt).toLocaleString() }}</span>
+                <p v-if="c.updatedAt" class="comment-meta">
+                  (edited {{ new Date(c.updatedAt).toLocaleString() }})
+                </p>
 
-    <div v-else>
-      <p class="comment-text">{{ c.text }}</p>
-      <span class="comment-meta">· {{ new Date(c.createdAt).toLocaleString() }}</span>
-      <p v-if="c.updatedAt" class="comment-meta">
-        (edited {{ new Date(c.updatedAt).toLocaleString() }})
-      </p>
-
-      <div v-if="!c.fromSeed" class="flex gap-3 mt-1 text-xs">
-<button @click="startEdit(c)" class="comment-edit">Edit</button>
-        <button @click="deleteComment(c.id)" class="hover:underline comment-delete">
-          Delete
-        </button>
-      </div>
-    </div>
-  </li>
-</ul>
-
+                <div v-if="!c.fromSeed" class="flex gap-3 mt-1 text-xs">
+                  <button @click="startEdit(c)" class="comment-edit">Edit</button>
+                  <button @click="deleteComment(c.id)" class="hover:underline comment-delete">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </li>
+          </ul>
 
           <p v-else class="text-xs text-gray-500">No comments yet.</p>
         </div>
@@ -109,9 +116,9 @@
 </template>
 
 <script setup lang="ts">
-import { RouterLink } from "vue-router";
-import { useNewsStore } from "@/stores/newsStore";
-import { computed, ref } from "vue";
+import { RouterLink } from 'vue-router';
+import { useNewsStore } from '@/stores/newsStore';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{ item: any }>();
 const newsStore = useNewsStore();
@@ -123,7 +130,7 @@ async function vote(dir: 1 | -1) {
   await newsStore.vote(props.item.id, dir);
 }
 
-const newComment = ref("");
+const newComment = ref('');
 const comments = computed(() => newsStore.commentsFor(props.item.id));
 const showComments = ref(false);
 
@@ -134,13 +141,13 @@ function toggleComments() {
 async function addNewComment() {
   if (newComment.value.trim()) {
     await newsStore.addComment(props.item.id, newComment.value.trim());
-    newComment.value = "";
+    newComment.value = '';
     showComments.value = true;
   }
 }
 
 const editingId = ref<number | null>(null);
-const editText = ref("");
+const editText = ref('');
 
 function startEdit(c: any) {
   editingId.value = c.id;
@@ -148,7 +155,7 @@ function startEdit(c: any) {
 }
 function cancelEdit() {
   editingId.value = null;
-  editText.value = "";
+  editText.value = '';
 }
 async function saveEdit(commentId: number) {
   if (editText.value.trim()) {
@@ -158,5 +165,21 @@ async function saveEdit(commentId: number) {
 }
 async function deleteComment(commentId: number) {
   await newsStore.deleteComment(props.item.id, commentId);
+}
+
+// ✅ Share logic
+function shareNews() {
+  const shareData = {
+    title: props.item.topic,
+    text: `Check out this article: ${props.item.topic}`,
+    url: window.location.origin + `/news/${props.item.id}`,
+  };
+
+  if (navigator.share) {
+    navigator.share(shareData).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(shareData.url);
+    alert('✅ Link copied to clipboard!');
+  }
 }
 </script>
