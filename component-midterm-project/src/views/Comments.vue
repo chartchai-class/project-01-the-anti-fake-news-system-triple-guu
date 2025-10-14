@@ -11,13 +11,12 @@
         </p>
       </div>
 
-      <!-- quick filter -->
+      <!-- quick filter (optional visual only) -->
       <div class="inline-flex rounded-md border overflow-hidden">
         <button
           class="px-3 py-1.5 text-sm hover:bg-slate-50"
           :class="sort === 'new' ? 'bg-slate-100' : ''"
           @click="sort = 'new'"
-          :aria-pressed="sort === 'new'"
         >
           Newest
         </button>
@@ -25,7 +24,6 @@
           class="px-3 py-1.5 text-sm hover:bg-slate-50 border-l"
           :class="sort === 'old' ? 'bg-slate-100' : ''"
           @click="sort = 'old'"
-          :aria-pressed="sort === 'old'"
         >
           Oldest
         </button>
@@ -51,25 +49,20 @@
             </div>
 
             <!-- bubble -->
-            <div class="rounded-xl border bg-white p-3 shadow-sm hover:shadow transition-shadow">
-              <!-- header row -->
-              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 mb-1.5">
-                <span class="font-medium text-slate-700">{{ c.author || 'User' }}</span>
-                <span aria-hidden="true">•</span>
-                <time :datetime="c.createdAt">{{ fmt(c.createdAt) }}</time>
-                <span v-if="c.updatedAt" class="text-slate-400">· edited {{ fmt(c.updatedAt) }}</span>
-              </div>
+            <div class="comment-card rounded-xl border p-3">
 
-              <!-- content -->
-              <div class="text-sm whitespace-pre-line break-words">
-                <template v-if="isUrl(c.text)">
-                  <a :href="c.text" target="_blank" rel="noopener noreferrer nofollow ugc" class="text-blue-600 underline break-all">
+              <p class="text-sm whitespace-pre-line break-words">
+                <span v-if="isUrl(c.text)">
+                  <a :href="c.text" target="_blank" rel="noopener" class="text-blue-600 underline">
                     {{ c.text }}
                   </a>
-                </template>
-                <template v-else>
-                  {{ c.text }}
-                </template>
+                </span>
+                <span v-else>{{ c.text }}</span>
+              </p>
+
+              <div class="mt-2 flex items-center gap-3 text-[11px] text-slate-500">
+                <time :datetime="c.createdAt">{{ fmt(c.createdAt) }}</time>
+                <span v-if="c.updatedAt" class="text-slate-400">· edited {{ fmt(c.updatedAt) }}</span>
               </div>
             </div>
           </article>
@@ -81,12 +74,10 @@
 
         <!-- pagination -->
         <div class="mt-5 flex flex-col items-center gap-2">
-          <!-- Always show the pager; it disables itself on a single page -->
-          <PaginationComment
+          <Pagination
+            v-if="totalPages > 1"
             :page="page"
             :total-pages="totalPages"
-            :sibling-count="1"
-            :boundary-count="1"
             @update:page="(p:number)=>page=p"
           />
           <p class="text-xs text-slate-500">
@@ -102,9 +93,7 @@
           <p class="text-xs text-slate-500 mb-3">Plain text or a link (we’ll auto-link URLs).</p>
 
           <form @submit.prevent="submit" class="space-y-3">
-            <label for="comment-text" class="sr-only">Add a comment</label>
             <textarea
-              id="comment-text"
               v-model.trim="text"
               rows="4"
               placeholder="Share your thoughts…"
@@ -112,16 +101,11 @@
               aria-label="comment text"
             ></textarea>
 
-            <div class="flex items-center justify-between text-xs text-slate-500">
-              <span>{{ text.length }} characters</span>
-            </div>
-
             <button
-              type="submit"
               class="w-full rounded-md bg-blue-600 text-white py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-              :disabled="!text || posting"
+              :disabled="!text"
             >
-              {{ posting ? 'Posting…' : 'Post comment' }}
+              Post comment
             </button>
           </form>
 
@@ -135,11 +119,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useNewsStore } from '@/stores/newsStore'
 import EmptyState from '@/components/EmptyState.vue'
-import PaginationComment from '@/components/PaginationComment.vue' // ✅ matches your filename
+import Pagination from '@/components/Pagination.vue'
 
 const route = useRoute()
 const id = String(route.params.id)
@@ -162,7 +146,6 @@ const comments = computed(() => {
   if (sort.value === 'new') return arr.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
   return arr.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt))
 })
-
 const pageSize = 6
 const page = ref(1)
 const totalPages = computed(() => Math.max(1, Math.ceil(comments.value.length / pageSize)))
@@ -170,23 +153,13 @@ const start = computed(() => (page.value - 1) * pageSize)
 const end   = computed(() => page.value * pageSize)
 const paged = computed(() => comments.value.slice(start.value, end.value))
 
-// keep UX tidy
-watch(() => sort.value, () => { page.value = 1 })
-watch(() => comments.value.length, () => { page.value = Math.min(page.value, totalPages.value) })
-
-// add comment (prevents double submit)
+// add comment
 const text = ref('')
-const posting = ref(false)
 async function submit() {
-  if (!text.value || posting.value) return
-  posting.value = true
-  try {
-    await store.addComment(id, text.value)  // persists to localStorage per your project spec
-    text.value = ''
-    page.value = 1
-  } finally {
-    posting.value = false
-  }
+  if (!text.value) return
+  await store.addComment(id, text.value)  // store persists to localStorage per your project spec
+  text.value = ''
+  page.value = 1
 }
 
 // helpers
@@ -195,6 +168,6 @@ function fmt(iso: string) { return new Date(iso).toLocaleString() }
 function avatarInitialFor(c: any) { return (c.author || 'U').slice(0, 2).toUpperCase() }
 function avatarBgFor(seed: number) {
   const colors = ['bg-indigo-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500','bg-fuchsia-500']
-  return colors[((seed ?? 0) % colors.length + colors.length) % colors.length]
+  return colors[seed % colors.length]
 }
 </script>
