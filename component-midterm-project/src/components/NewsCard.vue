@@ -74,7 +74,7 @@
           @click="toggleComments"
           class="text-xs text-blue-600 hover:underline mb-2"
         >
-          {{ showComments ? 'Hide comments' : 'View comments (' + comments.length + ')' }}
+          {{ showComments ? 'Hide comments' : 'View comments (' + ((typeof item.commentCount === 'number' ? item.commentCount : comments.length)) + ')' }}
         </button>
 
         <div v-if="showComments">
@@ -150,9 +150,8 @@ import "emoji-picker-element";
 const props = defineProps<{ item: any }>();
 const newsStore = useNewsStore();
 
-// ✅ Computed status & votes
 const status = computed(() => newsStore.statusFor(props.item.id));
-const votes = computed(() => newsStore.votesFor(props.item.id));
+const votes = computed(() => newsStore.votesFor(props.item));
 
 const statusLabel = computed(() =>
   status.value === "fake"
@@ -184,6 +183,7 @@ function formatDateTime(value: any) {
 // 🗳️ Voting
 async function vote(dir: 1 | -1) {
   await newsStore.vote(props.item.id, dir);
+  await newsStore.fetchNews();
 }
 
 // 💬 Comments
@@ -192,13 +192,17 @@ const comments = computed(() => newsStore.commentsFor(props.item.id));
 const showComments = ref(false);
 const showEmoji = ref(false);
 
-function toggleComments() {
+async function toggleComments() {
   showComments.value = !showComments.value;
+  if (showComments.value) {
+    await newsStore.fetchComments(props.item.id);
+  }
 }
 
 async function addNewComment() {
   if (newComment.value.trim()) {
     await newsStore.addComment(props.item.id, newComment.value.trim());
+    await newsStore.fetchComments(props.item.id); // Refresh comments after adding
     newComment.value = "";
     showComments.value = true;
   }

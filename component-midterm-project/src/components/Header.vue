@@ -9,6 +9,13 @@
         <nav class="flex items-center gap-6 text-sm">
           <RouterLink to="/" class="text-white hover:text-blue-100" exact-active-class="text-blue-200 font-semibold">Home</RouterLink>
           <RouterLink to="/about" class="text-white hover:text-blue-100" exact-active-class="text-blue-200 font-semibold">About</RouterLink>
+          <template v-if="!authStore.token">
+            <RouterLink to="/login" class="text-white hover:text-blue-100">Login</RouterLink>
+            <RouterLink to="/register" class="text-white hover:text-blue-100">Register</RouterLink>
+          </template>
+          <template v-else>
+            <button @click="logout" class="text-white hover:text-blue-100 bg-blue-700 px-3 py-1 rounded">Logout</button>
+          </template>
         </nav>
       </div>
     </div>
@@ -16,4 +23,12 @@
 </template>
 <script setup>
 import { RouterLink } from "vue-router";
+import { useAuthStore } from '@/stores/authStore';
+import { computed } from 'vue';
+
+const authStore = useAuthStore();
+const logout = () => {
+  authStore.logout();
+  window.location.href = '/';
+};
 </script>

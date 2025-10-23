@@ -1,6 +1,7 @@
 // src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router' // type-only import
+import { useAuthStore } from '@/stores/authStore'
 
 // Lazy-loaded views
 const HomeView  = () => import('../views/HomeView.vue')
@@ -8,8 +9,24 @@ const Details   = () => import('../views/Details.vue')
 const Comments  = () => import('../views/Comments.vue')
 const AboutView = () => import('../views/AboutView.vue')
 const PostView = () => import('../views/PostView.vue')
+const LoginView = () => import('../views/LoginView.vue')
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/edit-profile',
+    name: 'edit-profile',
+    component: () => import('@/views/EditProfileView.vue'),
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/ProfileView.vue'),
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('@/views/RegisterView.vue'),
+  },
   {
     path: '/',
     name: 'home',
@@ -36,6 +53,12 @@ const routes: RouteRecordRaw[] = [
     name: 'post',
     component:PostView
   },
+
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginView,
+    },
 
   {
     // Details page (your app uses /news/:id)
@@ -67,5 +90,18 @@ const router = createRouter({
     return { top: 0 }
   },
 })
+
+// Global navigation guard for authentication
+router.beforeEach((to, from, next) => {
+  const auth = useAuthStore();
+  const publicPages = ['/login', '/about', '/register'];
+  const authRequired = !publicPages.includes(to.path);
+  const token = auth.token || localStorage.getItem('jwt');
+  if (authRequired && !token) {
+    next({ name: 'login' });
+  } else {
+    next();
+  }
+});
 
 export default router
