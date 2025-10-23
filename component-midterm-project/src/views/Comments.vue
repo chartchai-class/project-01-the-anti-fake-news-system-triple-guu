@@ -133,6 +133,7 @@ onMounted(async () => {
   if (!store.news.length && store.fetchNews) {
     await store.fetchNews()
   }
+    await store.fetchComments(id)
 })
 
 const item = computed(() => store.news.find(n => String(n.id) === id) || null)

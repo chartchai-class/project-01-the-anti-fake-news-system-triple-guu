@@ -26,24 +26,16 @@
       </div>
 
       <div class="flex flex-col gap-2">
-        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Upload Image</label>
-        <div
-          class="relative flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-        >
-          <input
-            type="file"
-            accept="image/*"
-            @change="handleImageUpload"
-            class="absolute inset-0 opacity-0 cursor-pointer"
-          />
-          <div class="text-center text-sm text-gray-600 dark:text-gray-400">
-            <span class="block font-medium">📸 Click or drag to upload</span>
-            <span class="text-xs text-gray-400 dark:text-gray-500">PNG, JPG up to 2MB</span>
-          </div>
-        </div>
-        <div v-if="previewUrl" class="mt-3">
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Image URL</label>
+        <input
+          v-model="imageUrl"
+          type="url"
+          placeholder="Paste image URL here (must be a real URL)"
+          class="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+        />
+        <div v-if="imageUrl" class="mt-3">
           <img
-            :src="previewUrl"
+            :src="imageUrl"
             alt="Preview"
             class="rounded-lg w-full max-h-64 object-cover border border-gray-300 dark:border-gray-700"
           />
@@ -80,45 +72,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, watch } from "vue"
 import { useRouter, RouterLink } from "vue-router"
+import { useNewsStore } from '@/stores/newsStore'
+
 
 const title = ref("")
 const reporter = ref("")
 const imageUrl = ref("")
+const short = ref("")
+const full = ref("")
 const description = ref("")
 const previewUrl = ref("")
 const router = useRouter()
+const newsStore = useNewsStore()
 
-function handleImageUpload(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) {
-    previewUrl.value = URL.createObjectURL(file)
-    const reader = new FileReader()
-    reader.onload = () => {
-      imageUrl.value = reader.result as string
-    }
-    reader.readAsDataURL(file)
-  }
-}
+// No-op: imageUrl should be a real URL, not a base64 string
 
 async function submitPost() {
-  const date = new Date().toISOString().split("T")[0]
-  const newPost = {
-    id: Date.now(),
-    topic: title.value,
-    reporter: reporter.value,
-    date,
-    imageUrl: imageUrl.value,
-    detail: description.value,
-    status: "neutral",
+  const dateTime = new Date().toISOString();
+  try {
+    await newsStore.createNews({
+      topic: title.value,
+      reporterName: reporter.value,
+      dateTime,
+      imageUrl: imageUrl.value,
+      shortDetail: short.value || description.value,
+      fullDetail: full.value || description.value,
+      status: "NEUTRAL"
+    })
+    alert("✅ News created successfully!")
+    router.push("/")
+  } catch (e) {
+    alert("❌ Failed to create news: " + (newsStore.apiError || e))
   }
-  await fetch("http://localhost:3001/news", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(newPost),
-  })
-  alert("✅ News created successfully!")
-  router.push("/")
 }
+
+// Keep short/full in sync with description for compatibility
+watch(description, (val) => {
+  short.value = val
+  full.value = val
+})
 </script>
