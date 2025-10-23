@@ -8,8 +8,8 @@
   },
   "scripts": {
     "web": "vite",
-    "api": "json-server --watch ./db.json --port 3001",
-    "dev": "run-p web api",
+    "api": "json-server --watch ./db.json --port 3003",
+    "dev": "npm run web",
     "build": "vue-tsc --noEmit && vite build",
     "build-only": "vite build",
     "preview:web": "vite preview --port 5173",
@@ -18,9 +18,10 @@
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
-    "mock-server": "json-server --watch db.json --port 3001"
+    "mock-server": "json-server --watch db.json --port 3003"
   },
   "dependencies": {
+    "axios": "^1.12.2",
     "emoji-picker-element": "^1.27.0",
     "lucide-vue-next": "^0.545.0",
     "pinia": "^3.0.3",
