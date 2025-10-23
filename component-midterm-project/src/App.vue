@@ -16,52 +16,20 @@
         </div>
 
         <div class="flex items-center gap-6 relative">
-          <nav class="hidden sm:flex gap-4 text-sm font-medium">
+          <nav class="hidden sm:flex gap-4 text-sm font-medium items-center">
             <RouterLink to="/" class="hover:text-brand-600">Home</RouterLink>
             <RouterLink to="/about" class="hover:text-brand-600">About</RouterLink>
+            <template v-if="!authStore.token">
+              <RouterLink to="/login" class="hover:text-brand-600">Login</RouterLink>
+              <RouterLink to="/register" class="hover:text-brand-600">Register</RouterLink>
+            </template>
+            <template v-else>
+              <RouterLink to="/profile" class="flex items-center ml-2">
+                <img v-if="authStore.profileImageUrl" :src="authStore.profileImageUrl" alt="Profile" class="w-8 h-8 rounded-full object-cover border-2 border-blue-500" />
+                <span v-else class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">{{ (authStore.username || 'U').charAt(0).toUpperCase() }}</span>
+              </RouterLink>
+            </template>
           </nav>
-
-          <div class="relative">
-            <button
-              @click="toggleNotifications"
-              class="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-            >
-              <Bell class="w-5 h-5" />
-              <span
-                v-if="hasNewNotifications"
-                class="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-red-500"
-              ></span>
-            </button>
-
-            <div
-              v-if="showNotifications"
-              class="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 z-50"
-            >
-              <h3 class="text-sm font-semibold mb-2">Latest Updates</h3>
-              <ul class="text-sm space-y-1 max-h-48 overflow-y-auto">
-                <li
-                  v-for="n in latestNews"
-                  :key="n.id"
-                  class="hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-                >
-                  <RouterLink
-                    :to="`/news/${n.id}`"
-                    class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/40 transition"
-                    @click="showNotifications = false"
-                  >
-                    📰
-                    <span class="line-clamp-1">{{ n.topic }}</span>
-                  </RouterLink>
-                </li>
-              </ul>
-              <button
-                @click="clearNotifications"
-                class="w-full mt-2 text-xs text-blue-600 hover:underline"
-              >
-                Mark all as read
-              </button>
-            </div>
-          </div>
 
           <button
             @click="toggleDarkMode"
@@ -92,37 +60,16 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { RouterLink } from "vue-router";
-import { Bell } from "lucide-vue-next";
-import { useNewsStore } from "@/stores/newsStore";
+import { RouterLink, useRouter } from "vue-router";
+import { useAuthStore } from '@/stores/authStore';
 
-const newsStore = useNewsStore();
-const showNotifications = ref(false);
-const hasNewNotifications = ref(false);
-const latestNews = ref([]);
+const authStore = useAuthStore();
+const router = useRouter();
 
-function toggleNotifications() {
-  showNotifications.value = !showNotifications.value;
-  if (showNotifications.value) hasNewNotifications.value = false;
+function logout() {
+  authStore.logout();
+  router.push('/');
 }
-
-function clearNotifications() {
-  hasNewNotifications.value = false;
-  showNotifications.value = false;
-}
-
-async function checkForUpdates() {
-  const beforeCount = newsStore.news.length;
-  await newsStore.fetchNews();
-  const newItems = newsStore.news.slice(-3);
-  latestNews.value = newItems;
-
-  if (newsStore.news.length > beforeCount) {
-    hasNewNotifications.value = true;
-  }
-}
-
-setInterval(checkForUpdates, 20000);
 
 const isDark = ref(false);
 function toggleDarkMode() {
@@ -142,6 +89,5 @@ onMounted(() => {
     isDark.value = true;
     document.documentElement.classList.add("dark");
   }
-  checkForUpdates();
 });
 </script>
