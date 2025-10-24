@@ -3,7 +3,7 @@ name: Deploy to AWS Docker on merge
 on:
   push:
     branches:
-      - prod
+      - main
 
 jobs:
   docker:
