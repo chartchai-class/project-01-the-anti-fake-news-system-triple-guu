@@ -1,0 +1,6 @@
+services:
+    web:
+        image: "emerald31/se331-frontend:latest"
+        ports:
+            - 8001:80
+
