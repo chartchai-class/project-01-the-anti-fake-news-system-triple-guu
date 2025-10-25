@@ -2,6 +2,9 @@ name: Build & Push Frontend
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'component-midterm-project/**'
+      - '.github/workflows/frontend-deploy.yml'
   workflow_dispatch:
 
 jobs:
@@ -13,7 +16,7 @@ jobs:
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3
-        
+
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -26,8 +29,8 @@ jobs:
       - name: Build & push se331-frontend
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./component-midterm-project
+          file: ./component-midterm-project/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/se331-frontend:latest
           build-args: |
