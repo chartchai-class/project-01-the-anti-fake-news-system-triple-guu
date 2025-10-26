@@ -2,8 +2,6 @@ name: Build & Push Frontend
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'component-midterm-project/**'
   workflow_dispatch:
 
 jobs:
