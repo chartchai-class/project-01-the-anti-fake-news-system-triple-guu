@@ -36,7 +36,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { registerApi } from '@/services/registerApi'
+import apiClient from '@/services/AxiosClient'
 
 const name = ref('')
 const surname = ref('')
@@ -53,7 +53,7 @@ async function register() {
     return
   }
   try {
-    await registerApi({
+    await apiClient.post('/auth/register', {
       name: name.value,
       surname: surname.value,
       username: username.value,
